@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>اسکنر پیش‌نگر Toobit</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d30;--line:#263650;--muted:#91a3bd;--txt:#edf3ff;--green:#19c37d;--red:#ff647c;--blue:#68a8ff;--gold:#f4c66a}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#0b1220,#101b2c);color:var(--txt);font:15px system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1050px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:23px;margin:5px 0}.sub{color:var(--muted);font-size:13px}.tag{border:1px solid #315078;color:#a9ceff;border-radius:20px;padding:6px 10px;font-size:12px}
+.panel{background:#121d30;border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:14px;box-shadow:0 8px 30px #0003}
+.controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}
+select,button{width:100%;border:1px solid #344761;border-radius:10px;padding:11px;background:#0c1728;color:var(--txt);font:inherit}
+button{background:#1769d2;border:0;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
+.actions{display:flex;gap:10px;margin-top:12px}.actions button{max-width:220px}.ghost{background:#263750}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.stat{background:#0c1728;border:1px solid var(--line);padding:12px;border-radius:12px}.stat b{display:block;font-size:20px;margin-top:4px}
+.note{font-size:12px;color:var(--muted);line-height:1.8;margin-top:10px}
+.status{color:var(--gold);font-size:13px;margin-top:10px;min-height:22px}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}th,td{text-align:right;padding:11px 8px;border-bottom:1px solid #263650;white-space:nowrap}th{color:var(--muted);font-weight:500}
+.coin{font-weight:750}.positive{color:var(--green)}.negative{color:var(--red)}.score{color:var(--gold);font-weight:800}
+.pills{display:flex;gap:5px;flex-wrap:wrap}.pill{font-size:11px;border:1px solid #35516e;border-radius:20px;padding:3px 7px;color:#b9d4f4}
+.tablewrap{overflow:auto}.empty{text-align:center;color:var(--muted);padding:28px}
+footer{color:var(--muted);font-size:11px;line-height:1.8;margin:16px 3px}
+@media(max-width:650px){main{padding:12px}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(3,1fr)}h1{font-size:19px}.actions button{max-width:none}th,td{padding:9px 6px}}
+</style></head>
+<body><main>
+<div class="top"><div><h1>اسکنر پیش‌نگر Toobit</h1><div class="sub">پیدا کردن ارزهای Toobit با داده کندل و حجم Binance</div></div><span class="tag">نسخه بدون سرور · فقط اسپات USDT</span></div>
+<section class="panel">
+<div class="controls">
+<div><label>تایم‌فریم</label><select id="tf"><option value="15m">۱۵ دقیقه</option><option value="1h" selected>۱ ساعت</option><option value="4h">۴ ساعت</option></select></div>
+<div><label>حداقل حجم ۲۴ ساعته Binance (USDT)</label><select id="vol"><option value="100000">۱۰۰ هزار</option><option value="250000" selected>۲۵۰ هزار</option><option value="1000000">۱ میلیون</option><option value="5000000">۵ میلیون</option></select></div>
+<div><label>حداقل امتیاز سیگنال</label><select id="score"><option value="3">۳ از ۶</option><option value="4" selected>۴ از ۶</option><option value="5">۵ از ۶</option></select></div>
+<div><label>تعداد ارز برای بررسی</label><select id="count"><option value="50">۵۰ ارز پرحجم</option><option value="100" selected>۱۰۰ ارز پرحجم</option><option value="200">۲۰۰ ارز پرحجم</option><option value="all">همه ارزهای واجد شرایط</option></select></div>
+</div>
+<div class="actions"><button id="scan">شروع اسکن بازار</button><button id="stop" class="ghost" disabled>توقف</button></div>
+<div class="status" id="status">ابتدا فهرست جفت‌ارزهای اسپات USDT توبیت از CoinGecko دریافت و با بازار Binance تطبیق داده می‌شود.</div>
+<div class="stats">
+<div class="stat"><span class="sub">ارزهای بررسی‌شده</span><b id="checked">۰</b></div>
+<div class="stat"><span class="sub">نامزدهای پیدا‌شده</span><b id="found">۰</b></div>
+<div class="stat"><span class="sub">آخرین بروزرسانی</span><b id="updated" style="font-size:14px">—</b></div>
+</div>
+<div class="note">امتیاز از ۶ معیار: فشردگی بولینگر، شروع بازشدن باند، افزایش حجم، قیمت بالای EMA20، RSI مناسب و بهبود MACD. امتیاز بالا تضمین رشد نیست.</div>
+</section>
+<section class="panel">
+<div class="top"><div><b>نامزدهای صعودی</b><div class="sub">فقط ارزهایی که جفت USDT آن‌ها در فهرست بازار Toobit پیدا شده</div></div><span class="tag">قیمت/حجم/کندل: Binance</span></div>
+<div class="tablewrap"><table><thead><tr><th>ارز</th><th>قیمت Binance</th><th>۲۴ساعت</th><th>RSI</th><th>حجم نسبت به میانگین</th><th>امتیاز</th><th>نشانه‌ها</th></tr></thead><tbody id="rows"><tr><td colspan="7" class="empty">هنوز اسکن انجام نشده است.</td></tr></tbody></table></div>
+</section>
+<footer>
+فهرست بازار Toobit از صفحه عمومی بازارهای CoinGecko خوانده می‌شود؛ سپس فقط برای همان دارایی‌ها داده بازار Binance گرفته می‌شود. بنابراین قیمت، حجم و اندیکاتورها قیمت Binance هستند و ممکن است با Toobit اختلاف داشته باشند. این صفحه سفارش ثبت نمی‌کند و به کلید API نیاز ندارد. اگر یکی از سرویس‌ها دسترسی مرورگر را مسدود کند، پیام خطا نشان داده می‌شود و هیچ ارز تأییدنشده‌ای به‌عنوان لیست‌شده نمایش داده نمی‌شود.
+</footer>
+</main>
+<script>
+const CG='https://api.coingecko.com/api/v3', BN='https://api.binance.com';
+let stopped=false,busy=false;
+const $=id=>document.getElementById(id);
+const fmt=(n,d=6)=>Number(n).toLocaleString('en-US',{maximumFractionDigits:d});
+async function get(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status+' — '+new URL(url).hostname);return r.json()}
+function sma(a,n){return a.slice(-n).reduce((x,y)=>x+y,0)/n}
+function emaArr(a,n){let k=2/(n+1),out=[a[0]];for(let i=1;i<a.length;i++)out.push(a[i]*k+out[i-1]*(1-k));return out}
+function rsi(a,n=14){let g=0,l=0;for(let i=a.length-n;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}return l===0?100:100-100/(1+(g/n)/(l/n))}
+function calc(k,ticker){
+ const c=k.map(x=>+x[4]),v=k.map(x=>+x[5]);
+ if(c.length<40)return null;
+ const last=c.at(-1),mid=sma(c,20),sd=Math.sqrt(c.slice(-20).reduce((s,x)=>s+(x-mid)**2,0)/20);
+ const widths=[];for(let i=19;i<c.length;i++){let m=sma(c.slice(0,i+1),20),s=Math.sqrt(c.slice(i-19,i+1).reduce((z,x)=>z+(x-m)**2,0)/20);widths.push(4*s/m)}
+ const recent=widths.at(-1),priorMin=Math.min(...widths.slice(-12,-1));
+ const squeeze=recent<=priorMin*1.18;
+ const bandOpen=recent>widths.at(-2)*1.04&&c.at(-1)>c.at(-2);
+ const volRatio=v.at(-1)/Math.max(.0000001,sma(v.slice(0,-1),20));
+ const e20=emaArr(c,20),above=last>e20.at(-1),rr=rsi(c);
+ const e12=emaArr(c,12),e26=emaArr(c,26),mac=e12.map((x,i)=>x-e26[i]),sig=emaArr(mac,9),hist=mac.at(-1)-sig.at(-1),prev=mac.at(-2)-sig.at(-2);
+ const macd=hist>prev||(hist>0&&prev<=0);
+ const score=[squeeze,bandOpen,volRatio>=1.5,above,rr>=45&&rr<=68,macd].filter(Boolean).length;
+ let signs=[];if(squeeze)signs.push('فشردگی BB');if(bandOpen)signs.push('بازشدن باند');if(volRatio>=1.5)signs.push('جهش حجم');if(above)signs.push('بالای EMA20');if(rr>=45&&rr<=68)signs.push('RSI مناسب');if(macd)signs.push('بهبود MACD');
+ return {symbol:ticker.symbol,price:last,change:+ticker.priceChangePercent,quote:+ticker.quoteVolume,rsi:rr,vr:volRatio,score,signs};
+}
+async function loadToobitUsdtBases(){
+ const bases=new Set();let pages=6;
+ for(let p=1;p<=pages;p++){
+  if(stopped)break;
+  $('status').textContent=`دریافت فهرست جفت‌های Toobit از CoinGecko: صفحه ${p} از ${pages} ...`;
+  const data=await get(`${CG}/exchanges/toobit/tickers?page=${p}&order=volume_desc`);
+  const arr=data.tickers||[];
+  for(const t of arr){if(String(t.target).toUpperCase()==='USDT'&&t.market&&t.market.identifier==='toobit'&&t.base)bases.add(String(t.base).toUpperCase())}
+  if(arr.length<100)break;
+ }
+ if(!bases.size)throw new Error('فهرست جفت‌های USDT توبیت از CoinGecko دریافت نشد یا ساختار پاسخ تغییر کرده است.');
+ return bases;
+}
+async function scan(){
+ if(busy)return;busy=true;stopped=false;$('scan').disabled=true;$('stop').disabled=false;
+ $('rows').innerHTML='<tr><td colspan="7" class="empty">در حال آماده‌سازی فهرست ارزها...</td></tr>';$('checked').textContent='۰';$('found').textContent='۰';
+ try{
+  const bases=await loadToobitUsdtBases();
+  if(stopped)throw new Error('اسکن متوقف شد.');
+  $('status').textContent=`${bases.size} دارایی پایه از بازار USDT توبیت شناسایی شد؛ دریافت داده Binance...`;
+  const [info,tickers]=await Promise.all([get(`${BN}/api/v3/exchangeInfo`),get(`${BN}/api/v3/ticker/24hr`)]);
+  const valid=new Set(info.symbols.filter(x=>x.status==='TRADING'&&x.quoteAsset==='USDT'&&x.isSpotTradingAllowed!==false).map(x=>x.symbol));
+  let list=tickers.filter(x=>valid.has(x.symbol)&&bases.has(x.symbol.slice(0,-4))&&+x.quoteVolume>=+$('vol').value).sort((a,b)=>+b.quoteVolume- +a.quoteVolume);
+  const n=$('count').value;if(n!=='all')list=list.slice(0,+n);
+  if(!list.length)throw new Error('هیچ جفت Binance USDT با فهرست USDT توبیت و حداقل حجم انتخابی مشترک نبود.');
+  $('status').textContent=`${list.length} جفت مشترک پیدا شد؛ کندل‌ها در حال دریافت‌اند...`;
+  const results=[];let idx=0,done=0;const tf=$('tf').value;
+  async function worker(){while(idx<list.length&&!stopped){const item=list[idx++];try{const k=await get(`${BN}/api/v3/klines?symbol=${item.symbol}&interval=${tf}&limit=100`);const r=calc(k,item);if(r&&r.score>=+$('score').value)results.push(r)}catch(e){}done++;$('checked').textContent=fmt(done,0);$('found').textContent=fmt(results.length,0);$('status').textContent=`اسکن کندل‌ها: ${done} از ${list.length} ...`;}}
+  await Promise.all(Array.from({length:5},worker));
+  results.sort((a,b)=>b.score-a.score||b.quote-a.quote);
+  $('rows').innerHTML=results.length?results.map(x=>`<tr><td class="coin">${x.symbol.replace('USDT','')}<div class="sub">USDT</div></td><td>${fmt(x.price,8)}</td><td class="${x.change>=0?'positive':'negative'}">${x.change>=0?'+':''}${fmt(x.change,2)}%</td><td>${fmt(x.rsi,1)}</td><td>${fmt(x.vr,2)}x</td><td class="score">${x.score}/6</td><td><div class="pills">${x.signs.map(s=>`<span class="pill">${s}</span>`).join('')}</div></td></tr>`).join(''):'<tr><td colspan="7" class="empty">با این فیلترها نامزد واجد شرایط پیدا نشد؛ حداقل امتیاز یا حجم را کمتر کن.</td></tr>';
+  $('updated').textContent=new Date().toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'});
+  $('status').textContent=stopped?'اسکن متوقف شد.':`تمام شد: ${done} ارز بررسی شد؛ ${results.length} نامزد پیدا شد. قیمت و حجم از Binance است.`;
+ }catch(e){$('status').textContent='خطا: '+e.message+'؛ اگر CORS/Failed to fetch دیدی، یکی از سرویس‌ها دسترسی مستقیم مرورگر را بسته است.';$('rows').innerHTML='<tr><td colspan="7" class="empty">داده دریافت نشد؛ اتصال اینترنت یا محدودیت سرویس را بررسی کن.</td></tr>'}
+ finally{busy=false;$('scan').disabled=false;$('stop').disabled=true}
+}
+$('scan').addEventListener('click',scan);$('stop').addEventListener('click',()=>{stopped=true;$('status').textContent='در حال توقف...'});
+</script></body></html>
