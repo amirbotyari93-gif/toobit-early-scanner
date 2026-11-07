@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>اسکنر پیش‌نگر Toobit - نسخه ۴</title>
+<style>
+:root{color-scheme:dark;--bg:#08111f;--panel:#121e31;--line:#2b3d58;--muted:#9aacc4;--txt:#eef4ff;--blue:#1769d2;--green:#20c78a;--gold:#f2c66d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px system-ui,sans-serif}
+main{max-width:1000px;margin:auto;padding:16px}h1{font-size:22px;margin:8px 0}.sub,label{color:var(--muted);font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;margin:14px 0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+select,button{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b1728;color:var(--txt);font:inherit}
+button{background:var(--blue);border:0;font-weight:bold;margin-top:12px}button:disabled{opacity:.5}
+.status{color:var(--gold);line-height:1.8;margin-top:12px;min-height:28px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:10px;background:#0b1728}.stat b{display:block;font-size:19px;margin-top:4px}
+.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}td,th{text-align:right;padding:10px 7px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted)}
+.good{color:var(--green)}.score{color:var(--gold);font-weight:bold}.note{font-size:12px;color:var(--muted);line-height:1.9}
+@media(max-width:600px){main{padding:11px}h1{font-size:19px}}
+</style></head>
+<body><main>
+<h1>اسکنر پیش‌نگر Toobit — نسخه ۴</h1>
+<div class="sub">شناسایی نامزدهای احتمالی رشد با فیلتر حجم، بولینگر، EMA، RSI و MACD</div>
+<section class="panel">
+<div class="grid">
+<div><label>تایم‌فریم</label><select id="tf"><option value="15m">۱۵ دقیقه</option><option value="1h" selected>۱ ساعت</option><option value="4h">۴ ساعت</option></select></div>
+<div><label>حداقل حجم ۲۴ ساعته (USDT)</label><select id="vol"><option value="100000">۱۰۰ هزار</option><option value="250000" selected>۲۵۰ هزار</option><option value="1000000">۱ میلیون</option></select></div>
+<div><label>حداقل امتیاز</label><select id="score"><option value="3">۳ از ۶</option><option value="4" selected>۴ از ۶</option><option value="5">۵ از ۶</option></select></div>
+<div><label>تعداد ارز</label><select id="count"><option value="50">۵۰</option><option value="100" selected>۱۰۰</option><option value="200">۲۰۰</option><option value="all">همه</option></select></div>
+</div>
+<button id="scan">شروع اسکن بازار</button>
+<div class="status" id="status">برای شروع، دکمه اسکن را بزن.</div>
+<div class="stats">
+<div class="stat"><span class="sub">بررسی‌شده</span><b id="checked">۰</b></div>
+<div class="stat"><span class="sub">نامزدها</span><b id="found">۰</b></div>
+<div class="stat"><span class="sub">زمان</span><b id="updated">—</b></div>
+</div>
+</section>
+<section class="panel">
+<b>نامزدهای صعودی</b>
+<div class="sub">فهرست جفت‌های USDT از Toobit؛ قیمت و کندل از Binance</div>
+<div class="tablewrap"><table><thead><tr><th>ارز</th><th>قیمت</th><th>تغییر ۲۴ساعت</th><th>RSI</th><th>نسبت حجم</th><th>امتیاز</th><th>نشانه‌ها</th></tr></thead><tbody id="rows"><tr><td colspan="7">هنوز اسکن انجام نشده.</td></tr></tbody></table></div>
+</section>
+<div class="note">توجه: این نسخه فقط اسکن و نمایش اطلاعات انجام می‌دهد و معامله ثبت نمی‌کند. قیمت و حجم از Binance است و ممکن است با Toobit تفاوت داشته باشد. سیگنال‌ها تضمین رشد نیستند. اگر سرویس‌ها دسترسی مرورگر را مسدود کنند، پیام خطا نمایش داده می‌شود.</div>
+</main>
+<script>
+const CG='https://api.coingecko.com/api/v3';
+const BN='https://data-api.binance.vision';
+const $=x=>document.getElementById(x);
+const fmt=(x,d=5)=>Number(x).toLocaleString('en-US',{maximumFractionDigits:d});
+async function get(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status+' از '+new URL(url).hostname);return r.json()}
+function avg(a){return a.reduce((s,x)=>s+x,0)/a.length}
+function ema(a,n){let k=2/(n+1),o=[a[0]];for(let i=1;i<a.length;i++)o.push(a[i]*k+o[i-1]*(1-k));return o}
+function rsi(a){let g=0,l=0;for(let i=a.length-14;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}return l===0?100:100-100/(1+g/l)}
+function analyze(k,t){
+ const c=k.map(x=>+x[4]),v=k.map(x=>+x[5]);if(c.length<40)return null;
+ const widths=[];for(let i=19;i<c.length;i++){let a=c.slice(i-19,i+1),m=avg(a),s=Math.sqrt(avg(a.map(x=>(x-m)**2)));widths.push(4*s/m)}
+ const w=widths.at(-1),squeeze=w<=Math.min(...widths.slice(-12,-1))*1.2;
+ const open=w>widths.at(-2)*1.04&&c.at(-1)>c.at(-2);
+ const vr=v.at(-1)/avg(v.slice(-21,-1)),e20=ema(c,20).at(-1),rr=rsi(c);
+ const m=ema(c,12).map((x,i)=>x-ema(c,26)[i]),signal=ema(m,9),hist=m.at(-1)-signal.at(-1),prev=m.at(-2)-signal.at(-2);
+ const flags=[squeeze,open,vr>=1.5,c.at(-1)>e20,rr>=45&&rr<=68,hist>prev];
+ const names=['فشردگی بولینگر','بازشدن باند','افزایش حجم','بالای EMA20','RSI مناسب','بهبود MACD'];
+ return {symbol:t.symbol.replace('USDT',''),price:c.at(-1),change:+t.priceChangePercent,rsi:rr,vr,score:flags.filter(Boolean).length,signals:names.filter((x,i)=>flags[i])};
+}
+async function scan(){
+ $('scan').disabled=true;$('rows').innerHTML='<tr><td colspan="7">در حال دریافت فهرست بازار...</td></tr>';
+ $('status').textContent='در حال دریافت فهرست جفت‌های USDT توبیت از CoinGecko...';
+ $('checked').textContent='۰';$('found').textContent='۰';
+ try{
+  const bases=new Set();
+  for(let p=1;p<=6;p++){
+   const d=await get(`${CG}/exchanges/toobit/tickers?page=${p}&order=volume_desc`);
+   for(const t of (d.tickers||[]))if(String(t.target).toUpperCase()==='USDT'&&t.market?.identifier==='toobit'&&t.base)bases.add(String(t.base).toUpperCase());
+   if((d.tickers||[]).length<100)break;
+  }
+  if(!bases.size)throw Error('فهرست جفت‌های USDT توبیت خالی است یا CoinGecko پاسخ مناسب نداد.');
+  $('status').textContent=`${bases.size} دارایی از Toobit پیدا شد؛ دریافت بازار Binance...`;
+  const [info,tickers]=await Promise.all([get(BN+'/api/v3/exchangeInfo'),get(BN+'/api/v3/ticker/24hr')]);
+  const valid=new Set(info.symbols.filter(x=>x.status==='TRADING'&&x.quoteAsset==='USDT'&&x.isSpotTradingAllowed!==false).map(x=>x.symbol));
+  let list=tickers.filter(t=>valid.has(t.symbol)&&bases.has(t.symbol.slice(0,-4))&&+t.quoteVolume>=+$('vol').value).sort((a,b)=>+b.quoteVolume- +a.quoteVolume);
+  if($('count').value!=='all')list=list.slice(0,+$('count').value);
+  if(!list.length)throw Error('جفت مشترک واجد شرایط پیدا نشد؛ حداقل حجم را کمتر کن.');
+  const out=[];let done=0,idx=0;const tf=$('tf').value;
+  async function worker(){while(idx<list.length){const t=list[idx++];try{const k=await get(`${BN}/api/v3/klines?symbol=${t.symbol}&interval=${tf}&limit=100`);const a=analyze(k,t);if(a&&a.score>=+$('score').value)out.push(a)}catch(e){}done++;$('checked').textContent=fmt(done,0);$('found').textContent=fmt(out.length,0);$('status').textContent=`در حال بررسی کندل‌ها: ${done} از ${list.length}`}}
+  await Promise.all(Array.from({length:5},worker));
+  out.sort((a,b)=>b.score-a.score);
+  $('rows').innerHTML=out.length?out.map(x=>`<tr><td><b>${x.symbol}</b></td><td>${fmt(x.price,8)}</td><td class="${x.change>=0?'good':''}">${fmt(x.change,2)}%</td><td>${fmt(x.rsi,1)}</td><td>${fmt(x.vr,2)}x</td><td class="score">${x.score}/6</td><td>${x.signals.join('، ')}</td></tr>`).join(''):'<tr><td colspan="7">با این فیلترها نامزدی پیدا نشد.</td></tr>';
+  $('updated').textContent=new Date().toLocaleTimeString('fa-IR');$('status').textContent=`پایان اسکن؛ ${done} ارز بررسی شد.`;
+ }catch(e){$('status').textContent='خطا: '+e.message+' — اگر Failed to fetch/CORS دیدی، محدودیت دسترسی سرویس از مرورگر است.';$('rows').innerHTML='<tr><td colspan="7">داده دریافت نشد؛ متن خطا را بررسی کن.</td></tr>'}
+ finally{$('scan').disabled=false}
+}
+$('scan').addEventListener('click',scan);
+</script></body></html>
